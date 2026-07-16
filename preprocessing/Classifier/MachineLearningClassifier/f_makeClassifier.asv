@@ -1,0 +1,147 @@
+function status = f_makeClassifier(pathStep0, nameStep0, pathStep1, classDxComparison, classCrossValFolds, databasePath, BIDSmodality)
+%Description:
+%Function that trains a classifier to differentiate two conditions, and creates ROC curves and Feature Importance graphics
+%The model trained is an XGBoosting algorithm, using a 80/20 Training/Test stratified split
+%INPUTS:
+%pathStep0          = String with the path were the files to train the model are located
+%       NOTE: If the Step 0 (Feature Selection) was correctly completed, the path will correspond to the Step0_FeatureSelection
+%       If the Step 0 was not completed, the path will correspond to the main folder of connectivity metrics
+%nameStep0          = String with the name of the .csv file that contains the data to train the model
+%       NOTE: The .csv is a matrix of [Subjects, Features], where the first  column corresponds to the diagnostics/comparisons/labels
+%       NOTE: nameStep0 can also be a cell with multiple .csv, and the user will be asked to pick one
+%       If the Step 0 was not completed, nameStep0 will be empty, as the data will be loaded from each sub-# folder
+%pathStep1          = String with the path where the .jpg with the ROC Curves and Feature Importance graphics will be stored 
+%classDxComparison  = Cell of 2x1, each field containing strings of the diagnostics to be compared ({} by default)
+%classCrossValFolds = Number of Cross-Validation folds to use for creating the ROC curves (5 by Default)
+%databasePath       = Path of the desired database that wants to be used
+%       NOTE: The databasePath MUST already be in a BIDS-like structure
+%       NOTE: databasePath will be only used if the user wants to use the complete connectivity metrics
+%BIDSmodality       = String with the modality of the data that will be analyzed (used in sub-#_BIDStask_BIDSmodality.set) ('eeg' by default)
+%       NOTE: BIDSmodality will be only used if the user wants to use the complete connectivity metrics
+%
+%OUTPUTS:
+%status             = 1 if the script was completed succesfully. 0 otherwise
+%Also saves the following metrics for the model: ROC_Curve.jpg, AllFeaturesImportance.jpg, and SHAP_BestFeaturesImportance.jpg
+%TIP: For more information about the classifier, check the .py and/or .ipynb scripts
+
+%Defines the default output
+status = 0;
+
+%Defines the default input
+if nargin < 4
+    classDxComparison = {};
+end
+if nargin < 5
+    classCrossValFolds = 5;
+end
+if nargin < 6
+    %Tries to define the databasePath with the given pathStep0
+    %If no nameStep was given, the path should be the connectivity metrics step 
+    %(should be databasePath/analysis_XX/Connectivity/Step1_ConnectivityMetrics)
+    %In any other case, the path should be the feature selection step
+    %(should be databasePath/analysis_XX/Classifier/Step0_FeatureSelection)
+    tempPath = strsplit(pathStep0, filesep);
+    databasePath = fullfile(tempPath{1:end-3});
+end
+if nargin < 7
+    BIDSmodality = 'eeg';
+end
+
+
+%Checks that the path containing the data to train the model exist
+if ~exist(pathStep0, 'dir')
+    disp('ERROR: The path that should contain the data to train the model DOES NOT EXIST:');
+    disp(pathStep0);
+    return
+end
+
+
+%Considers multiple cases to manage nameStep0
+if ischar(nameStep0) && ~isempty(nameStep0)
+    %If a name was given, check that it corresponds to a csv, and that it exists
+    if ~endsWith(nameStep0, '.csv')
+        disp('ERROR: A .csv file was expected, but the following file was given instead:');
+        disp(nameStep0);
+        return
+    end
+    fullFileStep0 = fullfile(pathStep0, nameStep0);
+    if ~exist(fullFileStep0, 'file')
+        disp('ERROR: The .csv that should contain the data to train the model does not exist:');
+        disp(fullFileStep0);
+        return
+    end
+    
+    %Defines the classDxComparison
+    comparison = strsplit(nameStep0, '__VS__');
+    dx1 = strsplit(comparison{1}, '_');
+    dx2 = strsplit(comparison{2}, '.csv');
+    newClassDxComparison = {dx1{1}, dx2{1}};
+    if ~
+    
+    
+elseif iscell(nameStep0)
+    %If multiple .csv were entered, let the user pick one
+    disp('WARNING: Multiple .csv files were found in the given folder. These are the files available:');
+    disp(nameStep0);
+    disp('Please enter the COMPLETE EXACT name (with .csv) of the file you want to analyze:');
+    tempName = input('', 's');
+    
+    %Checks that the name given by the user exists
+    if ~ismember(tempName, nameStep0)
+        fprintf('WARNING: The file name entered ("%s") does not exist', tempName);
+        disp('Please press any key to run the script again, or "q" to quit');
+        runAgain = input('', 's');
+        if strcmpi(runAgain, 'q')
+            disp('ERROR: Could not train the classifier because an invalid file was entered');
+            return
+        end
+        
+        status = f_makeClassifier(pathStep0, nameStep0, pathStep1, classDxComparison, classCrossValFolds, databasePath, BIDSmodality);
+        return
+    end
+    
+    %If a valid name was given, overwrites 'nameStep0' and defines the classDxComparison
+    nameStep0 = tempName;
+    comparison = strsplit(nameStep0, '__VS__');
+    dx1 = strsplit(comparison{1}, '_');
+    dx2 = strsplit(comparison{2}, '.csv');
+    newClassDxComparison = {dx1{1}, dx2{1}};
+    
+    
+elseif isempty(nameStep0)
+    %If none name was given, it means the user selected the complete connectivty metrics, WITHOUT feature selection
+    %Creates a new Csv with all the features
+    [statusNewCsv, newClassDxComparison] = f_createCsvAllMetrics(pathStep0, databasePath, BIDSmodality, classDxComparison);
+end
+
+
+%nameStep0 puede ser '' (cargar .mats de EEG_like), String con el .csv, o lista con varios .csv
+
+disp('--------------------Starting Step 0 (Feature Selection)---------------------');
+
+
+%Stratifies the subjects of that step by diagnosis, considering the information of each database
+%paths = Structure with 2 fields: 'DiagnosticsName' and 'DiagnosticsPath'
+%           Each field has a 1xM cell where M is the number of diagnoses of the databases.
+%           Each field of the M diagnoses contains a cell of Nx1, 
+%           where N is the number of subjects that the database(s) have per diagnosis
+%diagnostics = Cell of 1xM with a string in each field with the Names of the diagnostics
+[status, paths, diagnostics] = f_getDiagnosticIDs({databasePath}, {finalStepPath}, BIDSmodality);
+
+%Checks that the identification of diagnoses was completed succesfully
+if status == 0
+    disp('ERROR: Could not identify the diagnostic of the subjects');
+    return
+end
+
+%Performs the main feature selection (permutation and FDR)
+[status, finalStruct, newClassDxComparison, subjPerDx] = f_mainFeatSelection(paths, diagnostics, ...
+    params.classDxComparison, params.classNumPermutations, params.classSignificance);
+
+%Checks that the feature selection could be completed successfully
+if status == 0
+    disp('ERROR: Could not complete the feature selection step (permutation and FDR)');
+    return
+end
+
+end

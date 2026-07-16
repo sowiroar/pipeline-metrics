@@ -1,0 +1,146 @@
+%% Script to find cardiac signals from EKG
+%
+% Input: EEG set with EKG electrode
+% Output:set with marks over R peak in EEG.
+
+% Functions used:
+% peak_detection
+% Peakfinder
+% BuscarIntervaloMarcas
+
+%% (1) CONFIGURATION
+clear all
+clc
+restoredefaultpath
+
+%% (2) DIRECTIONS
+% path eeglab
+addpath(genpath('D:\Paula\toolbox\eeglab14_1_2b'));
+% path funciones
+addpath(genpath('D:\Paula\Intero_priming_fondecyt\Scripts_fondecyt\a4_metemarcas\'));
+
+
+%% (2.b) DATASET CONFIGURACION
+ 
+Gru = ['CN']; % Group name 
+
+% bdfs path
+cfg.pathset=['D:\Paula\Intero_priming_fondecyt\EEG_analisis_CHILE\',Gru,'\a3_Marc_E\'];
+cfg.pathMarc=['D:\Paula\Intero_priming_fondecyt\EEG_analisis_CHILE\',Gru,'\a3_Marc_EyC\'];
+cd(cfg.pathset)
+suj_aux=dir('*.set')
+
+for suj= 2%:length(suj_aux)
+    %% Pre load info
+    suj_aux2=(suj_aux(suj).name);
+    S=suj_aux2(1:4);
+
+ 
+%% EEGLAB
+    eeglab;
+    [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
+    EEG = pop_loadset('filename',suj_aux2,'filepath',cfg.pathset);
+    [ALLEEG, EEG, CURRENTSET] = eeg_store( ALLEEG, EEG, 0 );
+    eeglab redraw;
+    
+    corazon=EEG.data(129,:);
+     
+%     SI el corazón está invertido, lo corrijo multiplicandolo por *-1
+%     corazon=corazon*-1
+%     plot(corazon)
+
+    picos=peak_detection(corazon,EEG.srate);
+
+    % te pregunta el umbral y lo guarda
+    umbral=picos.umbral;
+%     save corazon corazon
+%     save umbral umbral
+%         
+%     load (['corazon.mat']);
+%     
+    ecg=corazon;
+    clear corazon
+        
+%    load ('umbral');
+
+    picos = peakfinder(ecg,umbral)/EEG.srate;
+    %calcula tiempos absolutos EN SEG de TODOS los latidos
+    %picos=picos.picos_times;
+
+%% Comienzo a calcular los picos
+    %Le restamos 24
+%     picosdos=picos-(24/EEG.srate);
+%     clear picos
+%     picos=picosdos;
+    
+%% Iteracion por la cantidad de picos
+    for i= 1:length(picos)
+            HBTP{i,2}=picos(i);
+            %metemos los latidos en una lista de eventos
+    end
+    i=1;  
+    
+   
+    
+    %% Obtengo intervalos de los bloques
+    a3 = BuscarIntervaloMarcas(EEG, 201, 211);
+    a4 = BuscarIntervaloMarcas(EEG, 202, 222);
+    b3 = BuscarIntervaloMarcas(EEG, 203, 233);
+    b4 = BuscarIntervaloMarcas(EEG, 204, 244);
+    [a3, a4, b3, b4, eventos_lat] = BuscarIntervaloEmociones_f(EEG);
+  
+%% asigno los bloques a la variable HBTP
+
+    for p=1:length(HBTP)
+         if HBTP{p,2}>=(a3(1)) && HBTP{p,2}<=(a3(end))
+            HBTP{p,1}='HBT_a3';
+          elseif HBTP {p,2}>=(a4(1)) && HBTP {p,2}<=(a4(end))
+             HBTP{p,1}='HBT_a4';
+          elseif HBTP{p,2}>=(b3(1)) && HBTP{p,2}<=(b3(end))
+             HBTP{p,1}='HBT_b3';
+          elseif HBTP{p,2}>=(b4(1)) && HBTP{p,2}<=(b4(end))
+             HBTP{p,1}='HBT_b4';
+          elseif HBTP{p,2}>=(a3(1)) && HBTP{p,2}<=(a3(end))
+            HBTP{p,1}='HBT_a3';
+          elseif HBTP {p,2}>=(a4(1)) && HBTP {p,2}<=(a4(end))
+             HBTP{p,1}='HBT_a4';
+          elseif HBTP{p,2}>=(b3(1)) && HBTP{p,2}<=(b3(end)) 
+             HBTP{p,1}='HBT_b3';
+          elseif HBTP{p,2}>=(b4(1)) && HBTP{p,2}<=(b4(end))
+             HBTP{p,1}='HBT_b4';
+         else
+            HBTP{p,1}='none';
+         end
+    end
+
+    
+%% Create .txt file to print info in, num2str(cur_subject)
+    transposed = HBTP;%eventos;
+    typelatency = transposed (:,[1:2]); %select the first two columns
+    nr_lines = length(typelatency); %defining length(lines) of typelatency file
+    archivo_txt = fullfile(cfg.pathMarc, 'markers_reposo.txt');
+    fid = fopen(archivo_txt, 'w'); 
+    % cd(suj_dir)
+    for j = 1:nr_lines; %loop for copying each line of the typelatency file in the .txt file
+        fprintf(fid, '%s\t%d\n', typelatency{j,1}, typelatency{j,2});
+    end % j typelatency
+    fclose(fid); %close the marker file
+    
+%% Imports the markers
+    [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
+    EEG = pop_loadset('filename',suj_aux2,'filepath',cfg.pathset);
+    [ALLEEG, EEG, CURRENTSET] = eeg_store( ALLEEG, EEG, 0 );
+
+    EEG = pop_importevent( EEG, 'event',archivo_txt,'fields',{'type' 'latency'},'skipline',1,'timeunit',1);
+    [ALLEEG EEG] = eeg_store(ALLEEG, EEG, CURRENTSET);
+    EEG = eeg_checkset( EEG );
+    [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 3,'savenew',fullfile([cfg.pathMarc,S,'_Marc']),'gui','off'); 
+
+    eeglab redraw;  
+    % clear all
+    
+    cd(cfg.pathMarc)
+
+end
+
+disp('Finished :) ')

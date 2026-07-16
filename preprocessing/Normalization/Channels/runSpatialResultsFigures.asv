@@ -1,0 +1,66 @@
+%% Defines the subject to be loaded, and the splines files
+iSub = 'F:\Pavel\Estandarizacion\Bases_de_Datos\HEP_AD_FTD_CN-UdeSa_BrainLat\analysis_RS\Preprocessing\Step6_BadChanInterpolation\sub-10001\eeg\s6_sub-10001_rs-HEP_eeg.set';
+originalSplines = 'splines128.spl';
+destinationSplines = 'splines128.spl';
+type = 1;       %1 if wants to perform mean correction 2 if wants to ignore it, and 3 if wants to make nearest neighbour
+pointOfInterest = {'first'};        %First if only wants to convert one point in time. Average if wants to take the average
+
+%% Loads the data and iterates over all timepoints
+%Loads the .set (EEGLab readable file)
+EEG = pop_loadset(iSub);
+
+%Step 0: Create the splines file (Has to be done only once)
+if ~exist(originalSplines, 'file')
+    headplot('setup', EEG.chanlocs, originalSplines);                                              %Default 6067-points mesh
+    %headplot('setup', EEG.chanlocs, originalSplines, 'meshfile', 'colin27headmesh.mat');            %1082-points mesh
+end
+if ~exist(destinationSplines, 'file')
+    headplot('setup', EEG.chanlocs, destinationSplines);                                           %Default 6067-points mesh
+    %headplot('setup', EEG.chanlocs, originalSplines, 'meshfile', 'colin27headmesh.mat');            %1082-points mesh
+end
+
+%Step 1: Define the data (matrix of [Channels, Time, Epochs]) that wants to be spatially normalized
+%mData = EEG.data(:,1,1);
+%mData = mData - mean(mData);
+%mData = mean(EEG.data, 3);
+%mData = EEG.data(:,1:2048);
+%mData = mData - mean(mData, 2);
+if strcmp(pointOfInterest, 'first')
+    mData = EEG.data(:,1);
+elseif strcmp(pointOfInterest, 'average')
+    mData = mean(EEG.data, 2);
+end
+
+%% Calculates the newData in the destination configuration
+tic
+[newData, distanceToNearest] = f_spatiallyNormalize(mData, originalSplines, destinationSplines, type);
+% [newData, distanceToNearest] = f_spatiallyNormalize(mData, originalSplines, destinationSplines, type, 'meshfile', 'colin27headmesh.mat');
+t = toc;
+
+%% Plots the data
+absDiff = abs(newData - mData);
+percentageError = 100*absDiff./mData;
+
+plot(mData, newData, '*r'), 
+hold on,
+plot([min(min(mData)), max(max(mData))], [min(min(mData)), max(max(mData))])
+plot([min(min(mData)), max(max(mData))], [0, 0], 'k')
+plot([0, 0], [min(min(mData)), max(max(mData))], 'k')
+xlabel('Original Data');
+ylabel('Predicted Data');
+
+%% More plots
+figure,
+plot(absDiff, '*')
+disp([mean(absDiff), std(absDiff)]);
+xlabel('Channels');
+ylabel('Absolute Error');
+title('Error averaged across time');
+
+
+figure,
+plot(percentageError, '*')
+disp([mean(percentageError, 2)), std(mean(percentageError, 2))]);
+xlabel('Channels');
+ylabel('Percentage Error');
+title('Error averaged across time');

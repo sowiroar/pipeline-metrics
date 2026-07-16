@@ -1,0 +1,16 @@
+{
+  "database_root": "../../4ta_fase/Data_prueba/entrada",
+  "output_root": "../salida",
+  "countries": [
+    "Cuba_58"
+  ],
+  "subject_class": "CN",
+  "fs": 512,
+  "eeglab_path": "",
+  "stages": [
+    "Preprocessing",
+    "Normalization",
+    "SourceTransformation",
+    "SourceNoNormalizedTransformation"
+  ]
+}
