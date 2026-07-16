@@ -54,6 +54,14 @@ Computes feature descriptors over the preprocessed sensor/source datasets and co
 
 ## 🚀 Getting Started
 
+### 📦 Repository Cloning (Git LFS)
+This repository uses **Git LFS** (Large File Storage) to handle heavy data and models (`.fdt`, `.set`, `.mat`, `.rar`). To download the complete repository with all its data, anyone should follow these steps:
+1. Install Git LFS on their system (if not already installed): `git lfs install`
+2. Clone the repository normally: `git clone https://github.com/sowiroar/pipeline-metrics.git`
+*(Git LFS will automatically download the heavy files during the clone).*
+3. If they ever pull changes and large files appear as tiny pointer files, they can manually pull the data with: `git lfs pull`
+
+### 📖 Specific Documentation
 Please refer to the specific README files under the subdirectories for detailed usage instructions:
 * For details about sensor cleaning, normalizations, and source space projections, see [preprocessing/README.md](preprocessing/README.md).
 * For details on running feature extractions and using consolidated outputs, see [postprocessing/README.md](postprocessing/README.md).
