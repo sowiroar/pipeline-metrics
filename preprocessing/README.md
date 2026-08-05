@@ -57,22 +57,18 @@ All stages of preprocessing, normalization, and source projection are orchestrat
    ```
 
 ### Step 2: Configure Dependencies
-Make sure you have **EEGLAB** and **FieldTrip** installed. Configure the paths inside `open_eeglab.m` to automatically initialize them:
+Make sure you have **EEGLAB** and **FieldTrip** installed. Configure their paths at the very top of `runMainPipeline_.m`:
 ```matlab
-% Set your local paths in open_eeglab.m:
-cd 'C:/path/to/eeglab/'
-eeglab
-cd 'C:/path/to/fieldtrip/'
-ft_defaults
+% Set your local paths for EEGLAB and FieldTrip here if they are not in your MATLAB path
+eeglab_path = 'C:/path/to/eeglab/eeglab.m';
+fieldtrip_path = 'C:/path/to/fieldtrip/ft_defaults.m';
 ```
+*(If they are already permanently added to your MATLAB path, you can leave these variables empty).*
 
 ### Step 3: Configure and Run the Orchestrator
 1. Open [runMainPipeline_.m](runMainPipeline_.m).
-2. Configure `databasePath` to point to your BIDS database directory:
-   ```matlab
-   databasePath = 'C:/path/to/my_BIDS_dataset';
-   ```
-3. Set the step arguments in `f_mainPipeline`:
+2. The script is configured to use a **relative path** to locate the BIDS database automatically (`../../4ta_fase/Data_prueba/entrada`). This ensures the pipeline is fully reproducible on any PC without modifying hardcoded absolute paths (like `C:/Users/...`).
+3. Set the step arguments in `f_mainPipeline` to control which stages execute:
    *   To run **Preprocessing** (Stages 1-2): Set `'runPrepro', true` and `'runPatientControlNorm', true`.
    *   To run **Source Transformation** (Stage 3): Set `'runChansToSource', true` and `'runSourceAvgROI', true`.
 4. Execute `runMainPipeline_.m` in MATLAB.

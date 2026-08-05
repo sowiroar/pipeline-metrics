@@ -117,8 +117,9 @@ function main_frecuency()
                             
                         case 'SourceNoNormalizedTransformation'
                             path2file = fullfile(config.database_root, country, 'analysis_RS', 'SourceNoNormalizedTransformation');
-                            archivos = dir(fullfile(path2file, ['*' strrep(subject_id,' ','') '*Rois.txt']));
+                            archivos = dir(fullfile(path2file, ['*' strrep(subject_id,' ','') '_*Rois.txt']));
                             if ~isempty(archivos)
+                                archivos = archivos(1);
                                 eegSignal = dlmread(fullfile(path2file, archivos.name));
                                 eegSignal = eegSignal';
                             else

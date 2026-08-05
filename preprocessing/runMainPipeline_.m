@@ -1,19 +1,28 @@
 %Runs the main pipeline for a database with BIDS format
 %NOTE: The current version DOES NOT allow the comparison of MULTIPLE databases at the SAME TIME
+%% Set your local paths for EEGLAB and FieldTrip here if they are not in your MATLAB path
+% eeglab_path = 'C:/path/to/eeglab/eeglab.m';
+% fieldtrip_path = 'C:/path/to/fieldtrip/ft_defaults.m';
+
+% Add them to the path if defined
+if exist('eeglab_path', 'var') && ~isempty(eeglab_path)
+    run(eeglab_path);
+end
+if exist('fieldtrip_path', 'var') && ~isempty(fieldtrip_path)
+    run(fieldtrip_path);
+end
+
 %% Run a specific step of the pre-processing pipeline for all subjects (one step for all subjects)%
-%databasePath = '  F:\Pavel\Estandarizacion\Bases_de_Datos\EMP-ManyPipelines';
-%databasePath = 'F:\Pavel\Estandarizacion\Bases_de_Datos\RS_SQZ-BrainLat';
-databasePath = '/data/VoiceLab/Users/U10 - Jhosmary Cuadros Castro/JCC/General_Code/prepro_analysis/';      %Database already in BIDS format
-%preproSteps = [1];                    %Can be either an integer or a vector of steps, or 'all'/data/VoiceLab/Users/U10 - Jhosmary Cuadros Castro/JCC/General_Code/prepro_analysis
+% Database should be relative to this script or configured dynamically
+currentPath = mfilename('fullpath');
+[currentDir, ~, ~] = fileparts(currentPath);
+databasePath = fullfile(currentDir, '..', '..', '4ta_fase', 'Data_prueba', 'entrada'); % Relative to repository root
+
 signalType = 'RS';                 %singalType to be anaylzed ('HEP', 'RS', or 'task')
-%f_mainPipeline(databasePath, 'signalType', 'RS', 'runPrepro'y, false, 'runChansToSouryce', false, 'runSourceAvgROI', false, ...
-%    'runPatientControlNorm', false, 'avgSourceTime', false, 'sourceTransfMethod', 'FT_eLORETA', 'runConnectivity', false, ...
-%    'runFeatureSelection', true, 'classCrossValFolds', 3);
-%f_mainPipeline(databasePath, 'signalType', 'RS', 'runPrepro', false, 'runSpatialNorm', false, 'runChansToSource', true, 'runSourceAvgROI', true, ...
-  %  'runPatientControlNorm', false, 'runClassifier', false,'finalNormStepPath', '/data/VoiceLab/Users/U10 - Jhosmary Cuadros Castro/JCC/General_Code/prepro_analysis/analysis_RS/Normalization/Step2_PatientControlNorm')
-%eventosHip1 = {'101', '102'};
+
+% Run pipeline stages
 f_mainPipeline(databasePath, 'signalType', 'RS', 'runPrepro', false, 'runSpatialNorm', false, 'runChansToSource', false, 'runSourceAvgROI', false, ...
-   'runPatientControlNorm',false, 'runClassifier', false,'finalNormStepPath', '/data/VoiceLab/Users/U10 - Jhosmary Cuadros Castro/JCC/General_Code/prepro_analysis/analysis_RS/Normalization/Step2_PatientControlNorm')
+   'runPatientControlNorm',false, 'runClassifier', false, 'finalNormStepPath', fullfile(databasePath, 'analysis_RS', 'Normalization', 'Step2_PatientControlNorm'))
 %eventosHip1 = {'101', '102'};
 
 

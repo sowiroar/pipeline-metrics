@@ -1,5 +1,5 @@
 {
-  "database_root": "../../4ta_fase/Data_prueba/entrada",
+  "database_root": "../../../4ta_fase/Data_prueba/entrada",
   "output_root": "../salida",
   "countries": [
     "Cuba_58"

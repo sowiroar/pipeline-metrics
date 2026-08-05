@@ -98,7 +98,7 @@ def main():
                                 eeg_data = np.loadtxt(found[0]).T
                                 
                     elif stage == 'SourceNoNormalizedTransformation':
-                        search_patron = os.path.join(db_root, country, 'analysis_RS', 'SourceNoNormalizedTransformation', f'*{subj_clean}*Rois.txt')
+                        search_patron = os.path.join(db_root, country, 'analysis_RS', 'SourceNoNormalizedTransformation', f'*{subj_clean}_*Rois.txt')
                         found = glob(search_patron)
                         if found:
                             eeg_data = np.loadtxt(found[0]).T
