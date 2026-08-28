@@ -81,7 +81,8 @@ params = finputcheck( varargin, {'BIDSmodality',        'string',       '',     
                                 'reref_REST',           'boolean',      '',         false;
                                 'burstCriterion',       'float',        [0, inf],   5;
                                 'windowCriterion',      'float',        [0, inf],   0.25;
-                                'onlyBlinks',           'boolean',      '',         false
+                                'onlyBlinks',           'boolean',      '',         false;
+                                'chanlocsFile',         'string',       '',         ''
                                 } ...
                                 );
 
@@ -177,10 +178,14 @@ for i = params.initialSub:nSubj
     
     %Asks the user if it wants to continue with the next subject
     if i > params.initialSub && (ismember(1, step) || strcmp(step, 'all'))       %If it is the step 1, a lot of input from the user is required
-        disp('Do you want to continue with the next subject? (y/n)');
-        nextSubj = input('', 's');
-        if ~strcmpi(nextSubj, 'y')
-            break
+        if ~usejava('desktop') || ~usejava('jvm')
+            disp('Batch mode: Continuing with the next subject automatically.');
+        else
+            disp('Do you want to continue with the next subject? (y/n)');
+            nextSubj = input('', 's');
+            if ~strcmpi(nextSubj, 'y')
+                break
+            end
         end
     end
     
@@ -207,8 +212,8 @@ for i = params.initialSub:nSubj
         
         %If the user wants to filter and resample the data, do it
         if params.filterAndResample
-            %Filters and resamples the data
-            [status, EEG] = f_optStep0FilterAndResample(iSetPath, iSetName, params.newSR, params.freqRange);
+            %Note: This script will run pop_loadset on the given path and name
+            [status, EEG] = f_optStep0FilterAndResample(iSetPath, iSetName, params.newSR, params.freqRange, params.chanlocsFile);
 
             %Checks that the script was completed succesfully
             if status == 0

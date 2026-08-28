@@ -34,7 +34,7 @@ EEG = pop_loadset('filename', nameStep0, 'filepath', pathStep0);
 %pop_select(EEG, 'nochannel', [70])
 %pop_select(EEG, 'nochannel', [71])
 %pop_select(EEG, 'nochannel', [72])
-EEG = eeg_checkset( EEG )
+EEG = eeg_checkset( EEG );
 
 tempData = EEG.data;
 %EEG.chanlocs = pop_chanedit(EEG, 'load',{'/users/yqb22198/Downloads/Mahsa.locs','filetype','autodetect'});
@@ -129,59 +129,75 @@ if ~isempty(emptychans)
 end
 
 
-%Creates the figure to let the user visualize the data and select bad channels
-figure('Units', 'normalized', 'Position', [0, .3, 1, .62]);
-while 1
-    %Iteratively show the channel's data as a heatmap, with high and low values being possible noise.
-    clf
-    imagesc(tempData); h1=gca; caxis([lowerVal, higherVal]); set(h1,'xtick',[], 'ytick', 1:length(chanLbls), 'yticklabel', tempLbls);
-    title(['Select bad channels (will be excluded from ICA decomposition) for: ', nameStep0, '. Close this window once you have finished selecting bad channels']);
-    h2 = axes('position',[0.1 0.03 0.8 0.05]); x = [-2 -1 0]; imagesc(x, 1, x);
-    set(h2,'xtick',x,'xticklabel',{'<100','0','>100'},'ytick',[]);
-    title('Scale. Please click the rows of the channels you consider as bad on the heatmap above (bad channels are usually consistently dark blue or yellow). Remember to select non-EEG channels as well. If you want to unmark/unselect a bad channel, just click on it');
-    axes(h1);
+%Check if running in batch mode (no display available)
+isBatchMode = ~usejava('desktop') || ~usejava('jvm');
 
-    %Will ask the user to click a new channel until the window is closed
-    try
-        pos = ginput(1);
-        if (round(pos(2)) > length(chanLbls)+1) || (round(pos(2)) < 0) || pos(1) < 0
-            %Makes sure that the user is clicking within bounds
-            disp('Please click inside the colorbar')
-        else
-            if ismember(round(pos(2)),bad_channels)
-                %If the selected channel WAS on the list of bad channels, remove it
-                tempData(round(pos(2)),:) = EEG.data(round(pos(2)),:);
-                tempLbls{round(pos(2))} = chanLbls{round(pos(2))};
-                bad_channels(bad_channels == (round(pos(2)) )) = []; %#ok
-                disp(['Deleted bad channel: ', num2str(round(pos(2))), '-', chanLbls{round(pos(2))}])
+if isBatchMode
+    %BATCH MODE: Skip GUI, use only the channels from .tsv and auto-detected non-EEG channels
+    disp('Running in batch mode: skipping interactive channel selection GUI.');
+    disp(['Auto-identified ' num2str(length(bad_channels)) ' bad channels from .tsv and non-EEG detection.']);
+else
+    %INTERACTIVE MODE: Creates the figure to let the user visualize the data and select bad channels
+    figure('Units', 'normalized', 'Position', [0, .3, 1, .62]);
+    while 1
+        %Iteratively show the channel's data as a heatmap, with high and low values being possible noise.
+        clf
+        imagesc(tempData); h1=gca; caxis([lowerVal, higherVal]); set(h1,'xtick',[], 'ytick', 1:length(chanLbls), 'yticklabel', tempLbls);
+        title(['Select bad channels (will be excluded from ICA decomposition) for: ', nameStep0, '. Close this window once you have finished selecting bad channels']);
+        h2 = axes('position',[0.1 0.03 0.8 0.05]); x = [-2 -1 0]; imagesc(x, 1, x);
+        set(h2,'xtick',x,'xticklabel',{'<100','0','>100'},'ytick',[]);
+        title('Scale. Please click the rows of the channels you consider as bad on the heatmap above (bad channels are usually consistently dark blue or yellow). Remember to select non-EEG channels as well. If you want to unmark/unselect a bad channel, just click on it');
+        axes(h1);
+
+        %Will ask the user to click a new channel until the window is closed
+        try
+            pos = ginput(1);
+            if (round(pos(2)) > length(chanLbls)+1) || (round(pos(2)) < 0) || pos(1) < 0
+                %Makes sure that the user is clicking within bounds
+                disp('Please click inside the colorbar')
             else
-                %If the selected channel was NOT on the list of bad channels, add it
-                tempData(round(pos(2)),:) = lowerVal;
-                tempLbls{round(pos(2))} = strcat(chanLbls{round(pos(2))}, ' - MARKED');
-                bad_channels = [bad_channels round(pos(2))]; %#ok
-                disp(['Added bad channel: ', num2str(round(pos(2))), '-', chanLbls{round(pos(2))}])
+                if ismember(round(pos(2)),bad_channels)
+                    %If the selected channel WAS on the list of bad channels, remove it
+                    tempData(round(pos(2)),:) = EEG.data(round(pos(2)),:);
+                    tempLbls{round(pos(2))} = chanLbls{round(pos(2))};
+                    bad_channels(bad_channels == (round(pos(2)) )) = []; %#ok
+                    disp(['Deleted bad channel: ', num2str(round(pos(2))), '-', chanLbls{round(pos(2))}])
+                else
+                    %If the selected channel was NOT on the list of bad channels, add it
+                    tempData(round(pos(2)),:) = lowerVal;
+                    tempLbls{round(pos(2))} = strcat(chanLbls{round(pos(2))}, ' - MARKED');
+                    bad_channels = [bad_channels round(pos(2))]; %#ok
+                    disp(['Added bad channel: ', num2str(round(pos(2))), '-', chanLbls{round(pos(2))}])
+                end
             end
-        end
 
-    %If the window is closed, get out of the while
-    catch
-        break
+        %If the window is closed, get out of the while
+        catch
+            break
+        end
     end
 end
 
 
 %Checks if the user identified any bad channel
 if isempty(bad_channels)
-    %If there are none, ask the user if he really wants to continue without identifying bad channels
-    disp('WARNING: You did not select any channel as bad. If there is a bad channel, it might affect your results');
-    disp('Are you sure you want to continue with the preprocessing (y), or do you want to repeat this step (any key)?');
-    rerunStep1 = input('', 's');
-    if strcmpi(rerunStep1, 'y')
+    if isBatchMode
+        %In batch mode, just continue without bad channels
+        disp('WARNING: No bad channels identified in batch mode. Continuing without bad channels.');
         badChanIdxs = [];
         badChanLbls = {};
     else
-        disp('---------------Re running Step 1 (Identifying bad channels)-----------------');
-        [badChanIdxs, badChanLbls] = f_step1IdBadChannels(pathStep0, nameStep0, chanInfo);
+        %If there are none, ask the user if he really wants to continue without identifying bad channels
+        disp('WARNING: You did not select any channel as bad. If there is a bad channel, it might affect your results');
+        disp('Are you sure you want to continue with the preprocessing (y), or do you want to repeat this step (any key)?');
+        rerunStep1 = input('', 's');
+        if strcmpi(rerunStep1, 'y')
+            badChanIdxs = [];
+            badChanLbls = {};
+        else
+            disp('---------------Re running Step 1 (Identifying bad channels)-----------------');
+            [badChanIdxs, badChanLbls] = f_step1IdBadChannels(pathStep0, nameStep0, chanInfo);
+        end
     end
 else
     badChanIdxs = sort(bad_channels);

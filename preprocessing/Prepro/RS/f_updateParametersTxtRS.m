@@ -81,6 +81,11 @@ else
     %Extracts only the information of the given step
     stepInfo = txtParams(initialIdx:end);
     finalInfo = regexp(stepInfo, '\n \n');
+    if isempty(finalInfo)
+        finalInfo = length(stepInfo) + 1;
+    else
+        finalInfo = finalInfo(1);
+    end
     stepInfo = stepInfo(1:finalInfo-1);
     
     %On that information, look if the parameter value already existed
@@ -137,7 +142,7 @@ else
         
         %Add that info to the pre-existing one
         finalTxt = sprintf('%s%d%s', txtParams(1:initialIdx + initialNumParam -1), numSubjectsParam, ...
-            txtParams(initialIdx + initialNumParam + finalNumParam -2 : end));
+            txtParams(initialIdx + initialNumParam + finalNumParam(1) -2 : end));
     end
     
     %Finally, over-write the existing file, with the info in finalTxt

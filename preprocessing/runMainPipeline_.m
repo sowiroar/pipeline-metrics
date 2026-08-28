@@ -1,8 +1,8 @@
 %Runs the main pipeline for a database with BIDS format
 %NOTE: The current version DOES NOT allow the comparison of MULTIPLE databases at the SAME TIME
 %% Set your local paths for EEGLAB and FieldTrip here if they are not in your MATLAB path
-% eeglab_path = 'C:/path/to/eeglab/eeglab.m';
-% fieldtrip_path = 'C:/path/to/fieldtrip/ft_defaults.m';
+eeglab_path = 'C:/Users/eguen/AppData/Roaming/MathWorks/MATLAB Add-Ons/Collections/EEGLAB/eeglab.m';
+fieldtrip_path = 'C:/Users/eguen/AppData/Roaming/MathWorks/MATLAB Add-Ons/Collections/FieldTrip/ft_defaults.m';
 
 % Add them to the path if defined
 if exist('eeglab_path', 'var') && ~isempty(eeglab_path)
@@ -16,13 +16,16 @@ end
 % Database should be relative to this script or configured dynamically
 currentPath = mfilename('fullpath');
 [currentDir, ~, ~] = fileparts(currentPath);
-databasePath = fullfile(currentDir, '..', '..', '4ta_fase', 'Data_prueba', 'entrada'); % Relative to repository root
+databasePath = fullfile(currentDir, '..', '..', '2_prepro_analysis_brainlat'); % Point to the new validation dataset
 
 signalType = 'RS';                 %singalType to be anaylzed ('HEP', 'RS', or 'task')
 
 % Run pipeline stages
-f_mainPipeline(databasePath, 'signalType', 'RS', 'runPrepro', false, 'runSpatialNorm', false, 'runChansToSource', false, 'runSourceAvgROI', false, ...
-   'runPatientControlNorm',false, 'runClassifier', false, 'finalNormStepPath', fullfile(databasePath, 'analysis_RS', 'Normalization', 'Step2_PatientControlNorm'))
+f_mainPipeline(databasePath, 'signalType', 'RS', 'runPrepro', true, ...
+    'newPath', fullfile(currentDir, 'salida'), ...
+    'runSpatialNorm', false, 'runChansToSource', false, 'runSourceAvgROI', false, ...
+    'runPatientControlNorm', false, 'runClassifier', false, ...
+    'finalNormStepPath', fullfile(databasePath, 'analysis_RS', 'Normalization', 'Step2_PatientControlNorm'))
 %eventosHip1 = {'101', '102'};
 
 

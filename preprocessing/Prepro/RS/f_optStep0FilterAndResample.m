@@ -1,4 +1,4 @@
-function [status, EEG] = f_optStep0FilterAndResample(setPath, setName, newSR, freqRange)
+function [status, EEG] = f_optStep0FilterAndResample(setPath, setName, newSR, freqRange, chanlocsFile)
 %Description:
 %Optional function that filters and resamples the data
 %INPUTS:
@@ -8,6 +8,7 @@ function [status, EEG] = f_optStep0FilterAndResample(setPath, setName, newSR, fr
 %    NOTE: If it is empty, does not perform any resampling
 %freqRange = Vector of [2, 1] with the range of frequencies [lowcut, highcut] that want to be kept ([0.5, 40]Hz by default)
 %    NOTE: If it is empty, does not perform any filtering
+%chanlocsFile = String with the path to the channel locations file (optional)
 %OUTPUTS:
 %status = 1 if the script was completed succesfully. 0 otherwise
 %EEG = EEGLab structure already resampled
@@ -19,7 +20,9 @@ end
 if nargin < 4
     freqRange = [0.5, 40];
 end
-
+if nargin < 5
+    chanlocsFile = '';
+end
 
 %If filtering is desired, checks that a valid format was entered
 if ~isempty(freqRange)
@@ -43,6 +46,18 @@ status = 1;
 %Loads the desired .set
 EEG = pop_loadset('filename', setName, 'filepath', setPath);
 
+%If a channel locations file was provided, load it
+if ~isempty(chanlocsFile)
+    if endsWith(chanlocsFile, '.locs') || endsWith(chanlocsFile, '.ced') || endsWith(chanlocsFile, '.loc')
+        EEG.chanlocs = readlocs(chanlocsFile);
+        fprintf('Loaded custom channel locations from: %s\n', chanlocsFile);
+    else
+        % For standard BEM templates or other types
+        EEG = pop_chanedit(EEG, 'lookup', chanlocsFile);
+        fprintf('Loaded template channel locations from: %s\n', chanlocsFile);
+    end
+end
+
 
 if isempty(EEG.srate) == 1
     dt = mean(diff(EEG.times))
@@ -57,8 +72,13 @@ if ~isempty(newSR)
         fprintf('Your new Sampling rate = %dHz, is greater than your original Sampling rate = %dHz. Upsampling might create artifacts \n', newSR, EEG.srate);
         fprintf('It is recommended that you do not upsample your data. Instead, downsample the rest of your data to the current sampling rate = %d \n', EEG.srate);
         fprintf('To do so, run f_optStep1FilterAndResample(setPath, setName, %d), with the path and names of your whole dataset \n', EEG.srate);
-        disp('Do you want to upsample your data anyway (y/n?)');
-        upsampleData = input('', 's');
+        if ~usejava('desktop') || ~usejava('jvm')
+            disp('Batch mode: Not upsampling data automatically.');
+            upsampleData = 'n';
+        else
+            disp('Do you want to upsample your data anyway (y/n?)');
+            upsampleData = input('', 's');
+        end
         if strcmpi(upsampleData, 'y')
             fprintf('Not upsampling, neither filtering the .set: %s \n', fullfile(setPath, setName));
             status = 0;

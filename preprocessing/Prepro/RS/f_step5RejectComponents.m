@@ -46,8 +46,13 @@ comp_rej_heart = find(EEG_iclabel.etc.ic_classification.ICLabel.classifications(
 comp_rej_eyes = find(EEG_iclabel.etc.ic_classification.ICLabel.classifications(:,3)>0.85);
 
 %Runs an automatic identification of eye components using EyeCatch (Bigdely-Shamlo 2013)
-[eyeIC, ~, ~] = eyeDetector.detectFromEEG(EEG); % detect eye ICs
-eyeIC = find(eyeIC);
+try
+    [eyeIC, ~, ~] = eyeDetector.detectFromEEG(EEG); % detect eye ICs
+    eyeIC = find(eyeIC);
+catch ME
+    disp('WARNING: eyeCatch failed (possibly missing Wavelet Toolbox). Relying on ICLabel only for eye artifact detection.');
+    eyeIC = [];
+end
 
 %Merges the eye components, and merges it with the heart components
 mergedEyeComponents = [comp_rej_eyes', eyeIC];
@@ -69,7 +74,7 @@ if onlyBlinks
     params = checkBlinkerDefaults(struct(), getBlinkerDefaults(EEG));
     
     %Defines the parameters needed by BLINKER
-    params.signalNumbers = EEG.icachansind;                     %The numbers of the channel numbers to try as potential signals if signalTypeIndicator is ‘UseNumbers’.
+    params.signalNumbers = EEG.icachansind;                     %The numbers of the channel numbers to try as potential signals if signalTypeIndicator is â€˜UseNumbersâ€™.
     allChanLbls = {EEG.chanlocs(:).labels};
     params.signalLabels = allChanLbls(EEG.icachansind);         %The names of channels to try as potential signals if signalTypeIndicator is 'UseLabels'.
     excludedIdxs = 1:EEG.nbchan;

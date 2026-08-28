@@ -71,8 +71,13 @@ end
 %If the .json said it was referenced to average, check that the reference of the .set says so as well
 if isReferenced && strcmp(EEG.ref, 'averef')
     fprintf('WARNING: The database said that the original .sets were already referenced to average, but the EEGLab structure has a different reference: %s', EEG.ref);
-    disp('Do you want to reference it (y), or assume that it is already referenced (n)?');
-    ignoreDatabaseRef = input('');
+    if ~usejava('desktop') || ~usejava('jvm')
+        disp('Batch mode: Defaulting to re-referencing (y)');
+        ignoreDatabaseRef = 'y';
+    else
+        disp('Do you want to reference it (y), or assume that it is already referenced (n)?');
+        ignoreDatabaseRef = input('', 's');
+    end
     
     if strcmpi(ignoreDatabaseRef, 'y')
         %Re-reference to the average of the electrodes
